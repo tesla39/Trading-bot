@@ -38,11 +38,22 @@ def get_min_notional(symbol):
         raise ValueError(f"Invalid symbol: {symbol}")
 
     for f in info['filters']:
-        if f['filterType'] == 'NOTIONAL':
+        if f['filterType'] == 'NOTIONAL' or f['filterType'] == 'notional':
             # some symbols use 'notional', some use 'minNotional'
-            return float(f.get('minNotional', f.get('notional', 0.0)))
+            return float(f.get('minNotional', f.get('notional', 10.0)))
 
     raise ValueError(f" MIN_NOTIONAL filter not found for {symbol}")
+
+def get_valid_quantity(symbol):
+    price = get_price(symbol)
+    min_notional = get_min_notional(symbol)
+
+    # Add small buffer to avoid Binance rounding failure (e.g., +0.5%)
+    buffer = 1.005
+    raw_qty = (min_notional * buffer) / price
+
+    return float(format_quantity(symbol, raw_qty))
+
 
 #6. Place Orders
 def manual_mode(symbol, interval='5m'):
@@ -85,41 +96,65 @@ def place_order(signal, symbol, quantity):
     else:
         print("No valid signal, holding position.")
 
+#FOR MANUAL INPUT
+# def format_quantity(symbol, quantity):
+#     # Default to 6 decimal places; customize per symbol if needed
+#     return "{:.6f}".format(quantity).rstrip('0').rstrip('.')  # Clean trailing zeros and dot
+
+
+def get_step_size(symbol):
+    info = client.get_symbol_info(symbol)
+    for f in info['filters']:
+        if f['filterType'] == 'LOT_SIZE':
+            return float(f['stepSize'])
 
 def format_quantity(symbol, quantity):
-    # Default to 6 decimal places; customize per symbol if needed
-    return "{:.6f}".format(quantity).rstrip('0').rstrip('.')  # Clean trailing zeros and dot
+    step = get_step_size(symbol)
+    return format(quantity - (quantity % step), f'.{str(step)[::-1].find(".")}f')
 
+        
+def get_minimum_quantity(symbol):
+    price = get_price(symbol)
+    min_notional = get_min_notional(symbol)
+    raw_qty = min_notional / price
+    return float(format_quantity(symbol, raw_qty))
 
 def selector(SYM, strategy):
     symbol=SYM
     STRATEGY=strategy
+    mode = "auto"
+    signal = ""
+    #In FILUSDC, FIL is the base asset and USDC is the quote asset — to trade, you buy FIL using USDC.
+    price = get_price(symbol)
 
-    symbol = input("Enter symbol (e.g., BTCUSDT): ").upper()
-    mode = input("Enter mode (manual/auto): ").strip().lower()
-    quote_asset = client.get_symbol_info(symbol)['quoteAsset']
-    min_notional = get_min_notional(symbol)
-    signal=""
+    # symbol = input("Enter symbol (e.g., BTCUSDT): ").upper()
+    # mode = input("Enter mode (manual/auto): ").strip().lower()
+    # quote_asset = client.get_symbol_info(symbol)['quoteAsset']
+    # min_notional = get_min_notional(symbol)
+    # signal=""
 
-    while True:
-        quantity= float(input(f"Enter base quantity for {symbol}: "))
-        quantity = float(format_quantity(symbol, quantity))
-        price=get_price(symbol)
-        notional = quantity * price
+    # while True:
+    #     quantity= float(input(f"Enter base quantity for {symbol}: "))
+    #     quantity = float(format_quantity(symbol, quantity))
+    #     price=get_price(symbol)
+    #     notional = quantity * price
 
-        if notional < min_notional:
-            print(f" Notional value = {notional:.8f} {quote_asset} is below minimum {min_notional:.8f} {quote_asset}")
-        else:
-            break
+    #     if notional < min_notional:
+    #         print(f" Notional value = {notional:.8f} {quote_asset} is below minimum {min_notional:.8f} {quote_asset}")
+    #     else:
+    #         break
 
     if mode == "manual":
         manual_mode(symbol)
 
     elif mode == "auto":
             print("Enter the duration to run your bot:")
-            hours = int(input("Hours: "))
-            minutes = int(input("Minutes: "))
-            seconds = int(input("Seconds: "))
+            # hours = int(input("Hours: "))
+            # minutes = int(input("Minutes: "))
+            # seconds = int(input("Seconds: "))
+            hours = int(2)
+            minutes = int(2)
+            seconds = int(1)
 
             total_seconds = hours * 3600 + minutes * 60 + seconds
             end_time = time.time() + total_seconds
@@ -143,6 +178,7 @@ def selector(SYM, strategy):
                     #print(f"[{datetime.now()}] Latest signal: {signal}")
 
                     if signal in ['BUY', 'SELL']:
+                        quantity=get_valid_quantity(symbol)
                         price = get_price(symbol)
                         order_log.append({"type": signal, "price": price, "qty": quantity, "time": datetime.now()})
                         place_order(signal, symbol, quantity)
