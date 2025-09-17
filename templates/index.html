@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Bot Dashboard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <h1>📊 Bot Dashboard</h1>
+
+      <div class="buttons">
+        <button class="btn" onclick="startBot()">StartBot[Auto]</button>
+<button class="btn" onclick="showManualModal()">StartBot[Manual]</button>        
+<button class="btn" onclick="stopBot()">Stop Bot</button>
+        <button class="btn" onclick="alert('Feature coming soon')">Get Account Info</button>
+        <button class="btn" onclick="alert('Feature coming soon')">Trade History</button>
+        <button class="btn" onclick="alert('Feature coming soon')">PnL</button>
+        <button class="btn" onclick="alert('Feature coming soon')">Select Strategy</button>
+      </div>
+    
+     <!-- Add this modal structure to your index.html -->
+ <div id="manual-modal" class="modal-backdrop">
+    <div class="modal-content-container">
+      <button class="modal-close" onclick="closeManualModal()">&times;</button>
+      
+      <div class="modal-header">
+        <h3 class="modal-title">Configure Manual Bot</h3>
+      </div>
+      
+      <form id="botForm" onsubmit="submitManualForm(event)">
+        <div class="mb-3">
+          <label class="form-label">Bot Duration (minutes)</label>
+          <input type="number" class="form-control" name="bot_duration" placeholder="Enter duration in minutes" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Trading Mode</label>
+          <select class="form-select" name="trading_mode">
+            <option value="auto">Auto Trading</option>
+            <option value="manual">Manual Trading</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Trading Pair</label>
+          <select class="form-select" name="trading_pair">
+            <option value="BTCUSDT">BTC/USDT</option>
+            <option value="BNBUSDC">BNB/USDC</option>
+            <option value="DASHETH">DASH/ETH</option>
+            <option value="ETHMXN">ETH/MXN</option>
+            <option value="auto">Auto Select</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Total Amount (USDT)</label>
+          <input type="number" step="0.01" class="form-control" name="total_amount" placeholder="Enter amount in USDT" required>
+        </div>
+
+        <button type="submit" class="btn-submit">Start Manual Bot</button>
+      </form>
+    </div>
+  </div>
+
+      
+      <div class="dashboard-stats">
+        <div class="stat-box">
+          <div class="stat-title">Account Balance</div>
+          <div class="stat-value">$10,000</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">PnL</div>
+          <div class="stat-value">+$320</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">Bot Uptime</div>
+          <div class="stat-value">2h 15m</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">Last Trade Time</div>
+          <div class="stat-value">12:34 PM</div>
+        </div>
+      </div>
+    
+  <div class="bot-log-container">
+    <div class="stat-title">Bot Log</div>
+    <div id="bot-log" class="bot-log-display"></div>
+  </div>
+</div>
+
+    <div class="resizer" onmousedown="startResize(event)"></div>
+
+    <div class="right-panel">
+      <h2>📂 Open Trades</h2>
+      <div class="trade-list">
+        <div class="trade-item">
+          <h4>BTC/USDT</h4>
+          <p>Entry: 30,000 | Size: 0.5 BTC</p>
+        </div>
+        <div class="trade-item">
+          <h4>ETH/USDT</h4>
+          <p>Entry: 1,800 | Size: 2 ETH</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    async function startBot() {
+      await fetch('/start-bot', { method: 'POST' });
+      //alert("✅ Bot started");
+    }
+
+
+// Replace the Manualstart function with this
+ function showManualModal() {
+      const modal = document.getElementById('manual-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent scrolling
+    }
+
+    function closeManualModal() {
+      const modal = document.getElementById('manual-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = ''; // Re-enable scrolling
+    }
+
+    function submitManualForm(event) {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const formProps = Object.fromEntries(formData);
+      
+      console.log('Form submitted with data:', formProps);
+      
+      // Here you would send this data to your backend
+      alert('Manual bot configuration submitted successfully!');
+      closeManualModal();
+    }
+
+    // Close modal when clicking outside of it
+    document.getElementById('manual-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeManualModal();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeManualModal();
+      }
+    });
+    
+    async function stopBot() {
+      await fetch('/stop-bot', { method: 'POST' });
+      //alert("🛑 Bot stopped");
+    }
+    
+    async function fetchBotLog() {
+  const res = await fetch('/bot-status');
+  const data = await res.json();
+  document.getElementById('bot-log').innerText = data.logs.join('\n');
+}
+setInterval(fetchBotLog, 2000); // Poll every 2 seconds
+fetchBotLog();
+
+    function startResize(e) {
+      e.preventDefault();
+      document.addEventListener('mousemove', resize);
+      document.addEventListener('mouseup', stopResize);
+    }
+
+    function resize(e) {
+      const leftPanel = document.querySelector('.left-panel');
+      const newWidth = e.clientX;
+      if (newWidth > 300 && newWidth < 1200) {
+        leftPanel.style.width = newWidth + 'px';
+      }
+    }
+
+    function stopResize() {
+      document.removeEventListener('mousemove', resize);
+      document.removeEventListener('mouseup', stopResize);
+    }
+  </script>
+</body>
+</html>
+
