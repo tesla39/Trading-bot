@@ -18,7 +18,12 @@ def create_client():
     #SYMBOL = 'BTCUSDT'
     API_KEY=os.getenv("API_KEY")
     API_SECRET=os.getenv("API_SECRET")
-    client= Client(API_KEY, API_SECRET, testnet=True)
+    # client= Client(API_KEY, API_SECRET, testnet=True)
+    client = Client(API_KEY, API_SECRET, testnet=True,
+                requests_params={'proxies': {
+                    'http': 'http://puktowon:hb2qsqsjtpxw@45.38.107.97:6014',
+                    'http': 'http://puktowon:hb2qsqsjtpxw@64.137.96.74:6641'
+                }})
     return client
 
 
